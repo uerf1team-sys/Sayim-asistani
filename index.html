@@ -326,16 +326,16 @@ function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
  const arr=FORMS[form], subset=arr.slice(subsetStart,subsetEnd===null?arr.length:subsetEnd).filter(p=>p[0]!=='YAĞLAR');
  // Compact six-column WhatsApp report matching the supplied reference.
  const W=2400, margin=34, top=120, bottom=34, cols=4, gap=14;
- const items=subset.map(p=>{const i=arr.indexOf(p);return {p,i,rs:rec.filter(r=>r.form===form&&r.index===i)}});
+ const items=subset.map(p=>{const i=arr.indexOf(p);return {p,i,rs:rec.filter(r=>r.form===form&&r.index===i)}}).filter(it=>it.rs.length>0);
  const cellW=(W-margin*2-gap*(cols-1))/cols;
  const cardHeights=items.map(it=>Math.max(142, 112 + Math.max(1,it.rs.length)*34));
  const rows=Math.ceil(items.length/cols); let rowHeights=[];
  for(let row=0;row<rows;row++) rowHeights.push(Math.max(...cardHeights.slice(row*cols,(row+1)*cols)));
+ if(!items.length)return null;
  const H=top+bottom+rowHeights.reduce((a,b)=>a+b,0)+gap*(rows-1);
  const c=document.createElement('canvas'); c.width=W;c.height=H; const x=c.getContext('2d');
  x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#111827';x.font='bold 38px Arial';x.fillText('SAYIM RAPORU — '+new Date().toLocaleDateString('tr-TR'),margin,45);
  x.font='bold 29px Arial';x.fillText(form+(pageLabel?' — '+pageLabel:''),margin,88);
- x.fillStyle='#64748b';x.font='bold 16px Arial';x.fillText('Ürün ve kod • Palet × palet içi adet • Lokasyon • Satır adedi • Ürün toplamı',margin,111);
  let yOffsets=[];let runY=top;for(const h of rowHeights){yOffsets.push(runY);runY+=h+gap;}
  items.forEach((it,idx)=>{
   const col=idx%cols,row=Math.floor(idx/cols),xx=margin+col*(cellW+gap),yy=yOffsets[row],ch=rowHeights[row];
@@ -349,7 +349,6 @@ function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
   x.strokeStyle='#cbd5e1';x.lineWidth=1;x.beginPath();x.moveTo(a,yy+headerH);x.lineTo(a,bodyBottom);x.moveTo(b,yy+headerH);x.lineTo(b,bodyBottom);x.stroke();
   x.fillStyle='#111827';x.font='bold 15px Arial';x.textAlign='center';x.fillText('PALET × ADET',xx+(a-xx)/2,yy+headerH+18);x.fillText('LOKASYON',(a+b)/2,yy+headerH+18);x.fillText('ÜRÜN ADEDİ',(b+xx+cellW)/2,yy+headerH+18);x.textAlign='left';
   let totalP=0,totalU=0;
-  if(!rs.length){x.fillStyle='#64748b';x.font='bold 16px Arial';x.textAlign='center';x.fillText('—',xx+cellW/2,bodyY+bodyH/2+5);x.textAlign='left';}
   rs.forEach((r,ri)=>{const sy=bodyY+ri*slotH; if(ri>0){x.strokeStyle='#cbd5e1';x.beginPath();x.moveTo(xx,sy);x.lineTo(xx+cellW,sy);x.stroke();}
    const units=(Number(r.full)||0)*(Number(r.per)||0)+(Number(r.missing)||0);totalP+=Number(r.full)||0;totalU+=units;
    x.fillStyle='#111827';x.font='bold 17px Arial';x.textAlign='center';x.fillText((r.full||0)+'×'+(r.per||0)+(r.missing?' + '+r.missing:''),xx+(a-xx)/2,sy+slotH/2+6);
@@ -357,7 +356,7 @@ function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
    x.font='bold 17px Arial';x.fillText(units.toLocaleString('tr-TR'),(b+xx+cellW)/2,sy+slotH/2+6);x.textAlign='left';
   });
   x.fillStyle='#dceafa';x.fillRect(xx,bodyBottom,cellW,totalH);
-  x.fillStyle='#172554';x.font='bold 16px Arial';x.fillText(rs.length?totalP+' palet':'Toplam: 0 palet',xx+8,yy+ch-11);
+  x.fillStyle='#172554';x.font='bold 16px Arial';x.fillText(totalP+' palet',xx+8,yy+ch-11);
   x.textAlign='right';x.font='bold 23px Arial';x.fillText(totalU.toLocaleString('tr-TR')+' ADET TOPLAM',xx+cellW-8,yy+ch-10);x.textAlign='left';
  }); return c;
 }
@@ -369,7 +368,7 @@ function generateDailyReport(){
   {form:'TAMBUR STOK FORMU 1',start:25,end:50,label:'Tambur 1B'},
   {form:'TAMBUR STOK FORMU 2',start:0,end:null,label:'G Serisi Tamburlar'}
  ];
- jobs.forEach((job,i)=>{const c=canvasPage(job.form,i+1,job.start,job.end,job.label);const url=c.toDataURL('image/png');const a=document.createElement('a');a.href=url;a.download='Sayim_WhatsApp_'+(i+1)+'.png';a.textContent='📷 '+job.label+' — WhatsApp görselini indir';a.style.display='block';a.style.padding='12px 0';a.style.fontWeight='800';a.style.fontSize='16px';box.appendChild(a);});
+ let made=0; jobs.forEach(job=>{const c=canvasPage(job.form,made+1,job.start,job.end,job.label);if(!c)return;made++;const url=c.toDataURL('image/png');const a=document.createElement('a');a.href=url;a.download='Sayim_WhatsApp_'+made+'.png';a.textContent='📷 '+job.label+' — WhatsApp görselini indir';a.style.display='block';a.style.padding='12px 0';a.style.fontWeight='800';a.style.fontSize='16px';box.appendChild(a);});if(!made)box.textContent='Henüz sayım girilmiş ürün yok. Önce sayım kaydet.';
 }
 function render(){
  const root=document.getElementById('forms'); root.innerHTML='';
