@@ -1,4 +1,4 @@
-<!doctype html><html lang="tr">\1
+<!doctype html><html lang="tr"><head>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#17202a">
 <meta name="mobile-web-app-capable" content="yes">
@@ -66,9 +66,9 @@ h1{font-size:18px;margin:0}input,select,button{height:42px;border-radius:8px;bor
   <div><b>🔎 STOK KONTROLÜ</b><span>Güncel sayımda nerede ne var?</span></div>
   <button onclick="toggleStock()" id="stockBtn" style="background:#067647">STOK KONTROLÜNÜ AÇ</button>
 </div>
-<div class="transferbar" style="border-color:#7c3aed"><div><b>📸 GÜNLÜK WHATSAPP RAPORU</b><span>Mevcut listeyi 3 WhatsApp görseli olarak hazırlar.</span></div><button onclick="generateDailyReport()" style="background:#7c3aed">3 SAYFALIK RAPORU OLUŞTUR</button></div>
+<div class="transferbar" style="border-color:#7c3aed"><div><b>📸 GÜNLÜK WHATSAPP RAPORU</b><span>Büyük yazılı, tablo düzeninde 4 WhatsApp görseli hazırlar.</span></div><button onclick="generateDailyReport()" style="background:#7c3aed">WHATSAPP RAPORUNU OLUŞTUR</button></div>
 <div class="transferbar" style="border-color:#b42318"><div><b>↩️ SON İŞLEMİ GERİ AL</b><span>Yanlış düzeltme/silme durumunda son değişikliği geri al.</span></div><button onclick="undoLastChange()" style="background:#b42318">GERİ AL</button></div>
-<div id="reportPanel" class="stockPanel" hidden><div class="stockHead"><b>📸 Günlük Rapor</b><div class="small">3 PNG sayfası hazır. Her kayıt: palet×palet içi adet | lokasyon.</div></div><div id="reportLinks" class="stockResults"></div></div>
+<div id="reportPanel" class="stockPanel" hidden><div class="stockHead"><b>📸 Günlük Rapor</b><div class="small">4 PNG sayfası hazır. Her kayıt: palet×palet içi adet | lokasyon.</div></div><div id="reportLinks" class="stockResults"></div></div>
 <div id="historyPanel" class="stockPanel" hidden><div class="stockHead"><b>📜 Değişiklik Geçmişi</b></div><div id="historyResults" class="stockResults"></div></div>
 <div class="transferbar"><div><b>📜 GEÇMİŞİ GÖR</b></div><button onclick="toggleHistory()">GEÇMİŞİ AÇ</button></div>
 <div id="stockPanel" class="stockPanel" hidden>
@@ -91,7 +91,7 @@ const SUPABASE_KEY="sb_publishable_poEmLrHPVhljqv4UecUcHg_V4NJJxI8";
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentUser=null;
 
-const FORMS={"SİMPAC STOK FORMU": [["32 BMR TDS", "5198-5199", 600], ["40 BMR TDS", "6408-6411", 600], ["41 BMR TDS", "", 600], ["42 TDS", "1293-1295", 600], ["440/3", "9610", 40], ["TÖK / 701", "0,5", 300], ["TÖK / 771", "0,37", 250], ["TÖK / 702 (PYTHON)", "", 250], ["47 TDS KURUTUCU", "5683-5684", 600], ["47-51 BMR TDS", "2324-2524", 600], ["52 TDS", "0776-0781", 600], ["57 TDS", "777-782", 600], ["57 KURUTUCU", "779-784", 600], ["67 TDS", "778-783", 600], ["67 HB BMR TDS", "", 600], ["TAK (0,37) PULU", "7792", 500], ["440 PETINOX", "", 40], ["470 PETINOX", "", 40], ["T.A.K (0,37)", "7790", 80], ["440/4", "4969", 40], ["470/3", "3454", 40], ["510/3", "3458", 40], ["ÜDB AÇILI", "", null], ["ÜDB DÜZ", "4004", 2000], ["BMR TEKMELİK", "5169", 600], ["TÖK (0,5) PULU", "700", 500], ["440/2", "7918", 40], ["470 (KISA)", "", null], ["470/2", "1804", 40], ["YAS ANKASTRE", "9374", 2000], ["YAS KURUTUCU", "3992", 1000], ["YAS TUF", "3980", 1000], ["TÖK (0,37) PULU", "773", 500], ["ÖN PANEL SACI", "700x820-6590", 500], ["ANKASTRE", "440-9375", 40], ["ÜSDB T SERİSİ", "3972", 1200], ["MDS", "", 10000], ["YAS ALVA", "3978", 1000], ["G / TAK", "1138", 160], ["G / TÖK", "1140", 250], ["ANKASTRE SACI", "768x736,5-9376", 500], ["G TAK PULU", "6405", 500], ["G TÖK PULU", "6403", 500], ["YAS ANKASTRE KRTC", "9315", 2000], ["YAS DOZAI", "7673", 1200], ["SAC KASNAK TUF", "5426", 350], ["SAC KASNAK ALVA", "5425", 350], ["TDS 380-G", "6415-6416", 12], ["TDS 420-G", "6417-6418", 600], ["TDS 450-G", "6420-6431", 600], ["TDS 480-G", "6433-6434", 600], ["G SERİSİ TEKMELİK", "6440", 600], ["YAĞLAR", "051/101", null], ["YAĞLAR", "0/51", null], ["YAĞLAR", "201", null], ["YAĞLAR", "MZA/04", null], ["YAĞLAR", "Genarex", null], ["YAĞLAR", "Drawtex", null], ["YAĞLAR", "İzsol", null], ["YAĞLAR", "Fulform", null]], "TAMBUR STOK FORMU 1": [["32 A", "20703947", 19], ["40 SB", "20703986", 19], ["41 SB", "20703995", 19], ["41 SB2", "20703999", 19], ["41 SB3", "22234430", 19], ["42 BC (KP)", "22263687", 19], ["42 BC SK", "22244018", 19], ["43 BE SK", "22173578", 19], ["44 E SK", "22044033", 19], ["44 BC-SK", "22237713", 19], ["44 BE SK", "22044032", 19], ["44 B SK", "22044040", 19], ["47 BE2 SK", "22384630", 15], ["49 BE SK", "22154958", 15], ["49 B SK", "22044080", 15], ["49 CB SK", "22114663", 15], ["50 BE SK", "4960", 15], ["50 CB SK", "5106", 15], ["50 BESK INCI", "22154862", 15], ["50 CB INCI SK", "22153331", 15], ["51 BE SK", "22261725", 15], ["51 CB SK", "22145710", 15], ["52 CB SK", "22225486", 15], ["54 BE SK", "22237653", 15], ["54 CB SK", "22214455", 15], ["55 BE SK", "222377649", 15], ["55CB SK", "4642", 15], ["55 DC4 SK", "22324931", 15], ["55 DC4 INCI SK", "22324929", 15], ["55 INCI BE SK", "22237651", 15], ["55 INCI CB SK", "22114648", 15], ["59 C-4 SK", "22207825", 15], ["59 BE SK", "22324933", 15], ["60 INCI B SK", "22044090", 15], ["60 BE SK INCI", "22324936", 15], ["60 BE2 SK INCI (B)", "22443761", 15], ["60 BE2 SK ALVA (B)", "22450130", 15], ["60 BE2 SK ALVA", "22447950", 15], ["60 C4 SK", "22240344", 15], ["60 C4 INCI SK", "22207822", 15], ["60 C4 INCI SK (LG)", "22207822 LG", 15], ["60 DC4 INCI SK", "22115122", 15], ["62 DC-4 SK", "22155082", 15], ["62 FC 4 SK", "22257521", 15], ["62 FSK USA", "7991", 15], ["62 C4 SK", "22438459", 15], ["62 DC4 USA", "2332", 15], ["63 C SK", "6749", 15], ["69 F SK", "22044031", 10], ["56 LT", "22298563", 15]], "TAMBUR STOK FORMU 2": [["500 G23", "22276209", 12], ["450 G33", "22276222", 12], ["540 G33", "22276224", 12], ["550 G44", "22276225", 12], ["610 G45", "22276228", 12], ["670 G55", "22276230", 12], ["810 G66", "22276233", 12], ["G SERİSİ TAMBUR 6222", "6222", 12], ["G SERİSİ TAMBUR 6223", "6223", 12], ["G SERİSİ TAMBUR 6224", "6224", 12], ["G SERİSİ TAMBUR 6225", "6225", 12], ["G SERİSİ TAMBUR 6226", "6226", 12], ["G SERİSİ TAMBUR 6227", "6227", 12], ["G SERİSİ TAMBUR 6228", "6228", 12], ["G SERİSİ TAMBUR 6229", "6229", 12], ["G SERİSİ TAMBUR 6230", "6230", 12]]};
+const FORMS={"SİMPAC STOK FORMU": [["32 BMR TDS", "5198-5199", 600], ["40 BMR TDS", "6408-6411", 600], ["41 BMR TDS", "", 600], ["42 TDS", "1293-1295", 600], ["440/3", "9610", 40], ["TÖK / 701", "0,5", 300], ["TÖK / 771", "0,37", 250], ["TÖK / 702 (PYTHON)", "", 250], ["47 TDS KURUTUCU", "5683-5684", 600], ["47-51 BMR TDS", "2324-2524", 600], ["52 TDS", "0776-0781", 600], ["57 TDS", "777-782", 600], ["57 KURUTUCU", "779-784", 600], ["67 TDS", "778-783", 600], ["67 HB BMR TDS", "", 600], ["TAK (0,37) PULU", "7792", 500], ["440 PETINOX", "", 40], ["470 PETINOX", "", 40], ["T.A.K (0,37)", "7790", 80], ["440/4", "4969", 40], ["470/3", "3454", 40], ["510/3", "3458", 40], ["ÜDB AÇILI", "", null], ["ÜDB DÜZ", "4004", 2000], ["BMR TEKMELİK", "5169", 600], ["TÖK (0,5) PULU", "700", 500], ["440/2", "7918", 40], ["470 (KISA)", "", null], ["470/2", "1804", 40], ["YAS ANKASTRE", "9374", 2000], ["YAS KURUTUCU", "3992", 1000], ["YAS TUF", "3980", 1000], ["TÖK (0,37) PULU", "773", 500], ["ÖN PANEL SACI", "700x820-6590", 500], ["ANKASTRE", "440-9375", 40], ["ÜSDB T SERİSİ", "3972", 1200], ["MDS", "", 10000], ["YAS ALVA", "3978", 1000], ["G / TAK", "1138", 160], ["G / TÖK", "1140", 250], ["ANKASTRE SACI", "768x736,5-9376", 500], ["G TAK PULU", "6405", 500], ["G TÖK PULU", "6403", 500], ["YAS ANKASTRE KRTC", "9315", 2000], ["YAS DOZAI", "7673", 1200], ["SAC KASNAK TUF", "5426", 350], ["SAC KASNAK ALVA", "5425", 350], ["TDS 380-G", "6415-6416", 600], ["TDS 420-G", "6417-6418", 600], ["TDS 450-G", "6420-6431", 600], ["TDS 480-G", "6433-6434", 600], ["G SERİSİ TEKMELİK", "6440", 600], ["YAĞLAR", "051/101", null], ["YAĞLAR", "0/51", null], ["YAĞLAR", "201", null], ["YAĞLAR", "MZA/04", null], ["YAĞLAR", "Genarex", null], ["YAĞLAR", "Drawtex", null], ["YAĞLAR", "İzsol", null], ["YAĞLAR", "Fulform", null]], "TAMBUR STOK FORMU 1": [["32 A", "20703947", 19], ["40 SB", "20703986", 19], ["41 SB", "20703995", 19], ["41 SB2", "20703999", 19], ["41 SB3", "22234430", 19], ["42 BC (KP)", "22263687", 19], ["42 BC SK", "22244018", 19], ["43 BE SK", "22173578", 19], ["44 E SK", "22044033", 19], ["44 BC-SK", "22237713", 19], ["44 BE SK", "22044032", 19], ["44 B SK", "22044040", 19], ["47 BE2 SK", "22384630", 15], ["49 BE SK", "22154958", 15], ["49 B SK", "22044080", 15], ["49 CB SK", "22114663", 15], ["50 BE SK", "4960", 15], ["50 CB SK", "5106", 15], ["50 BESK INCI", "22154862", 15], ["50 CB INCI SK", "22153331", 15], ["51 BE SK", "22261725", 15], ["51 CB SK", "22145710", 15], ["52 CB SK", "22225486", 15], ["54 BE SK", "22237653", 15], ["54 CB SK", "22214455", 15], ["55 BE SK", "222377649", 15], ["55CB SK", "4642", 15], ["55 DC4 SK", "22324931", 15], ["55 DC4 INCI SK", "22324929", 15], ["55 INCI BE SK", "22237651", 15], ["55 INCI CB SK", "22114648", 15], ["59 C-4 SK", "22207825", 15], ["59 BE SK", "22324933", 15], ["60 INCI B SK", "22044090", 15], ["60 BE SK INCI", "22324936", 15], ["60 BE2 SK INCI (B)", "22443761", 15], ["60 BE2 SK ALVA (B)", "22450130", 15], ["60 BE2 SK ALVA", "22447950", 15], ["60 C4 SK", "22240344", 15], ["60 C4 INCI SK", "22207822", 15], ["60 C4 INCI SK (LG)", "22207822 LG", 15], ["60 DC4 INCI SK", "22115122", 15], ["62 DC-4 SK", "22155082", 15], ["62 FC 4 SK", "22257521", 15], ["62 FSK USA", "7991", 15], ["62 C4 SK", "22438459", 15], ["62 DC4 USA", "2332", 15], ["63 C SK", "6749", 15], ["69 F SK", "22044031", 10], ["56 LT", "22298563", 15]], "TAMBUR STOK FORMU 2": [["500 G23", "22276209", 12], ["450 G33", "22276222", 12], ["540 G33", "22276224", 12], ["550 G44", "22276225", 12], ["610 G45", "22276228", 12], ["670 G55", "22276230", 12], ["810 G66", "22276233", 12], ["G SERİSİ TAMBUR", "6222", 12], ["G SERİSİ TAMBUR", "6223", 12], ["G SERİSİ TAMBUR", "6224", 12], ["G SERİSİ TAMBUR", "6225", 12], ["G SERİSİ TAMBUR", "6226", 12], ["G SERİSİ TAMBUR", "6227", 12], ["G SERİSİ TAMBUR", "6228", 12], ["G SERİSİ TAMBUR", "6229", 12], ["G SERİSİ TAMBUR", "6230", 12]]};
 // GÜNCEL DÜZELTMELER (08.10.2026)
 const CODE_CORRECTIONS={};
 const CAPACITY_OVERRIDES={"ÜDB DÜZ":2000,"BMR TEKMELİK":600,"YAS ANKASTRE":2000,"YAS KURUTUCU":1000,"YAS TUF":1000,"MDS":10000,"YAS ALVA":1000,"YAS ANKASTRE KRTC":2000,"YAS DOZAI":1200,"G SERİSİ TEKMELİK":600,"510/3":40,"TDS 420-G":600,"TDS 450-G":600,"TDS 480-G":600};
@@ -331,35 +331,53 @@ function undoLastChange(){setmsg('Geri alma için önceki kayıt geçmişi bu s�
 
 function toggleHistory(){const p=document.getElementById('historyPanel');p.hidden=!p.hidden; if(!p.hidden){document.getElementById('historyResults').innerHTML=changeHistory.length?changeHistory.map((h,i)=>'<div class="entry"><b>'+(i+1)+'. '+h.action+'</b> — '+h.time+'</div>').join(''):'<div class="stockEmpty">Henüz değişiklik geçmişi yok.</div>';}}
 function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
- const arr=FORMS[form], subset=arr.slice(subsetStart,subsetEnd===null?arr.length:subsetEnd);
- const W=2400, margin=35, top=105, bottom=35, cols=7, gap=6;
- const items=subset.map((p,j)=>({p,i:subsetStart+j,rs:rec.filter(r=>r.form===form&&r.index===subsetStart+j)}));
- const rows=Math.ceil(items.length/cols);
+ const arr=FORMS[form], subset=arr.slice(subsetStart,subsetEnd===null?arr.length:subsetEnd).filter(p=>p[0]!=='YAĞLAR');
+ // Compact six-column WhatsApp report matching the supplied reference.
+ const W=2400, margin=34, top=112, bottom=30, cols=6, gap=10;
+ const items=subset.map(p=>{const i=arr.indexOf(p);return {p,i,rs:rec.filter(r=>r.form===form&&r.index===i)}});
  const cellW=(W-margin*2-gap*(cols-1))/cols;
- const baseRowH=300; const H=top+bottom+rows*baseRowH;
+ const cardHeights=items.map(it=>Math.max(116, 95 + Math.min(4,it.rs.length)*27));
+ const rows=Math.ceil(items.length/cols); let rowHeights=[];
+ for(let row=0;row<rows;row++) rowHeights.push(Math.max(...cardHeights.slice(row*cols,(row+1)*cols)));
+ const H=top+bottom+rowHeights.reduce((a,b)=>a+b,0)+gap*(rows-1);
  const c=document.createElement('canvas'); c.width=W;c.height=H; const x=c.getContext('2d');
- x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#111';x.font='bold 30px Arial';x.fillText('SAYIM RAPORU — '+new Date().toLocaleDateString('tr-TR'),margin,42);
- x.font='bold 24px Arial';x.fillText(form+(pageLabel?' — '+pageLabel:''),margin,78);
+ x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#111827';x.font='bold 38px Arial';x.fillText('SAYIM RAPORU — '+new Date().toLocaleDateString('tr-TR'),margin,43);
+ x.font='bold 27px Arial';x.fillText(form+(pageLabel?' — '+pageLabel:''),margin,82);
+ x.fillStyle='#64748b';x.font='bold 16px Arial';x.fillText('Ürün tanımı • Kod • Palet × adet • Lokasyon • Genel toplam',margin,103);
+ let yOffsets=[];let runY=top;for(const h of rowHeights){yOffsets.push(runY);runY+=h+gap;}
  items.forEach((it,idx)=>{
-  const col=idx%cols,row=Math.floor(idx/cols),xx=margin+col*(cellW+gap),yy=top+row*baseRowH;
-  const rs=it.rs; const slots=Math.max(1,Math.min(7,rs.length));
-  const headerH=68,totalH=38,bodyH=baseRowH-headerH-totalH,slotH=bodyH/slots;
-  x.strokeStyle='#444';x.lineWidth=2;x.strokeRect(xx,yy,cellW,baseRowH);
-  x.fillStyle='#e1e3e5';x.fillRect(xx,yy,cellW,headerH);
-  x.fillStyle='#111';x.font='bold 18px Arial';x.fillText(it.p[0].slice(0,22),xx+8,yy+25);
-  x.font='bold 17px Arial';x.fillText('Kod: '+(it.p[1]||'—'),xx+8,yy+50);
-  const split=xx+cellW*0.52,bodyY=yy+headerH;
-  x.strokeStyle='#777';x.beginPath();x.moveTo(split,bodyY);x.lineTo(split,yy+baseRowH-totalH);x.stroke();
-  for(let s=1;s<slots;s++){const ly=bodyY+s*slotH;x.beginPath();x.moveTo(xx,ly);x.lineTo(xx+cellW,ly);x.stroke();}
-  if(!rs.length){x.font='bold 18px Arial';x.fillText('—',xx+10,bodyY+slotH/2+6);}
-  let totalP=0,totalU=0; rs.slice(0,slots).forEach((r,ri)=>{const y=bodyY+ri*slotH+slotH/2+6; x.font='bold 17px Arial';x.fillStyle='#111';x.fillText((r.full||0)+'×'+(r.per||0)+(r.missing?' + '+r.missing:''),xx+8,y);x.fillText(r.loc||'—',split+8,y);totalP+=Number(r.full)||0;totalU+=(Number(r.full)||0)*(Number(r.per)||0)+(Number(r.missing)||0);});
-  x.fillStyle='#eef0f1';x.fillRect(xx,yy+baseRowH-totalH,cellW,totalH);x.fillStyle='#111';x.font='bold 14px Arial';if(rs.length)x.fillText(totalP+' palet → '+totalP+' × '+(it.p[2]||0)+' = '+totalU+' adet',xx+8,yy+baseRowH-12);
+  const col=idx%cols,row=Math.floor(idx/cols),xx=margin+col*(cellW+gap),yy=yOffsets[row],ch=rowHeights[row];
+  const rs=it.rs, headerH=39, labelH=22, totalH=31, bodyY=yy+headerH+labelH, bodyBottom=yy+ch-totalH, bodyH=Math.max(25,bodyBottom-bodyY), slots=Math.max(1,Math.min(4,rs.length)), slotH=bodyH/slots;
+  x.fillStyle='#fff';x.fillRect(xx,yy,cellW,ch);x.strokeStyle='#9ca3af';x.lineWidth=1.5;x.strokeRect(xx,yy,cellW,ch);
+  x.fillStyle='#26343d';x.fillRect(xx,yy,cellW,headerH);
+  x.fillStyle='#fff';x.font='bold 19px Arial';let name=it.p[0];while(x.measureText(name).width>cellW*.62&&name.length>8)name=name.slice(0,-2)+'…';x.fillText(name,xx+10,yy+25);
+  x.font='bold 16px Arial';x.textAlign='right';x.fillText('Kod: '+(it.p[1]||'—'),xx+cellW-9,yy+25);x.textAlign='left';
+  x.fillStyle='#edf1f4';x.fillRect(xx,yy+headerH,cellW,labelH);
+  const a=xx+cellW*.39,b=xx+cellW*.72;
+  x.strokeStyle='#cbd5e1';x.lineWidth=1;x.beginPath();x.moveTo(a,yy+headerH);x.lineTo(a,bodyBottom);x.moveTo(b,yy+headerH);x.lineTo(b,bodyBottom);x.stroke();
+  x.fillStyle='#111827';x.font='bold 12px Arial';x.textAlign='center';x.fillText('PALET × ADET',xx+(a-xx)/2,yy+headerH+15);x.fillText('LOKASYON',(a+b)/2,yy+headerH+15);x.fillText('ADET',(b+xx+cellW)/2,yy+headerH+15);x.textAlign='left';
+  let totalP=0,totalU=0;
+  if(!rs.length){x.fillStyle='#64748b';x.font='bold 16px Arial';x.textAlign='center';x.fillText('—',xx+cellW/2,bodyY+bodyH/2+5);x.textAlign='left';}
+  rs.slice(0,slots).forEach((r,ri)=>{const sy=bodyY+ri*slotH; if(ri>0){x.strokeStyle='#cbd5e1';x.beginPath();x.moveTo(xx,sy);x.lineTo(xx+cellW,sy);x.stroke();}
+   const units=(Number(r.full)||0)*(Number(r.per)||0)+(Number(r.missing)||0);totalP+=Number(r.full)||0;totalU+=units;
+   x.fillStyle='#111827';x.font='bold 14px Arial';x.textAlign='center';x.fillText((r.full||0)+'×'+(r.per||0)+(r.missing?' + '+r.missing:''),xx+(a-xx)/2,sy+slotH/2+5);
+   x.font='bold 14px Arial';let loc=r.loc||'—';while(x.measureText(loc).width>(b-a)-6&&loc.length>5)loc=loc.slice(0,-2)+'…';x.fillText(loc,(a+b)/2,sy+slotH/2+5);
+   x.fillText(units.toLocaleString('tr-TR'),(b+xx+cellW)/2,sy+slotH/2+5);x.textAlign='left';
+  });
+  x.fillStyle='#dceafa';x.fillRect(xx,bodyBottom,cellW,totalH);
+  x.fillStyle='#172554';x.font='bold 14px Arial';x.fillText(rs.length?totalP+' palet':'Toplam: 0 palet',xx+8,yy+ch-10);
+  x.textAlign='right';x.font='bold 20px Arial';x.fillText(totalU.toLocaleString('tr-TR')+' adet',xx+cellW-8,yy+ch-9);x.textAlign='left';
  }); return c;
 }
 function generateDailyReport(){
  const panel=document.getElementById('reportPanel');panel.hidden=false;const box=document.getElementById('reportLinks');box.innerHTML='';
- const jobs=[{form:'SİMPAC STOK FORMU',start:0,end:60,label:'Sayfa 1'},{form:'TAMBUR STOK FORMU 1',start:0,end:26,label:'Sayfa 2'},{form:'TAMBUR STOK FORMU 1',start:26,end:50,label:'Sayfa 3'},{form:'TAMBUR STOK FORMU 2',start:0,end:16,label:'G Serisi Tamburlar'}];
- jobs.forEach((job,i)=>{const c=canvasPage(job.form,i+1,job.start,job.end,job.label);const url=c.toDataURL('image/png');const a=document.createElement('a');a.href=url;a.download='Sayim_'+(i+1)+'.png';a.textContent='📷 '+job.label;a.style.display='block';a.style.padding='10px 0';box.appendChild(a);});
+ const jobs=[
+  {form:'SİMPAC STOK FORMU',start:0,end:52,label:'Simpac'},
+  {form:'TAMBUR STOK FORMU 1',start:0,end:25,label:'Tambur 1A'},
+  {form:'TAMBUR STOK FORMU 1',start:25,end:50,label:'Tambur 1B'},
+  {form:'TAMBUR STOK FORMU 2',start:0,end:null,label:'G Serisi Tamburlar'}
+ ];
+ jobs.forEach((job,i)=>{const c=canvasPage(job.form,i+1,job.start,job.end,job.label);const url=c.toDataURL('image/png');const a=document.createElement('a');a.href=url;a.download='Sayim_WhatsApp_'+(i+1)+'.png';a.textContent='📷 '+job.label+' — WhatsApp görselini indir';a.style.display='block';a.style.padding='12px 0';a.style.fontWeight='800';a.style.fontSize='16px';box.appendChild(a);});
 }
 function render(){
  const root=document.getElementById('forms'); root.innerHTML='';
