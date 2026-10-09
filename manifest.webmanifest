@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "Sayım Asistanı",
+  "short_name": "Sayım",
+  "description": "Stok sayımı, stok kontrolü ve WhatsApp raporu",
+  "lang": "tr-TR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f5f7",
+  "theme_color": "#17202a",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

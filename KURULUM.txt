@@ -1,0 +1,17 @@
+SAYIM ASİSTANI — ANA EKRANA UYGULAMA OLARAK EKLEME
+
+ÖNEMLİ:
+- Bu paket, mevcut sayım uygulamasının PWA/ana ekran kurulumu için hazırlanmıştır.
+- Kurulabilir olması için dosyaların HTTPS destekleyen bir web adresinde yayınlanması gerekir. ZIP'i telefonda açmak tek başına uygulama kurmaz.
+- Bu, yerel HTML dosyanızdaki kayıtları otomatik taşımaz. Mevcut sayım verilerinizi koruyun; eski HTML dosyasını ve mevcut verileri silmeyin.
+- Uygulama Supabase bağlantısı kullanır; çevrimdışı açılış kabuğu önbelleğe alınır ama çevrimdışı sayımın Supabase'e senkronize olacağı garanti değildir.
+
+YAYINLAMA:
+1. ZIP'i bilgisayarda açın.
+2. İçindeki index.html, manifest.webmanifest, sw.js ve icon.svg dosyalarını birlikte HTTPS destekleyen bir statik siteye yükleyin.
+3. Site adresini Android Chrome'da açın.
+4. Chrome ⋮ > "Uygulamayı yükle" veya "Ana ekrana ekle" seçeneğini kullanın.
+5. İlk kurulumda internet bağlantısı gerekir.
+
+VERİ GÜVENLİĞİ:
+Mevcut content:// ile açılan dosyadaki tarayıcı verileri farklı bir HTTPS adresine otomatik aktarılmaz. Önce mevcut uygulamada kayıtların yedeğini alın/aktarımı doğrulayın ve yeni sürümde Supabase hesabıyla giriş yapıp kayıtların doğru geldiğini test edin.
