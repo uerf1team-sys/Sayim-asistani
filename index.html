@@ -1,14 +1,6 @@
-<!doctype html><html lang="tr"><head>
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#17202a">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Sayım Asistanı">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
-<meta charset="utf-8">
+<!doctype html><html lang="tr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Sayım Asistanı V17 — Güvenli Kayıt</title>
+<title>Sayım Asistanı V18 — WhatsApp Tablo</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#e9edf0;color:#17202a;font-family:Arial,Helvetica,sans-serif}
 .top{position:sticky;top:0;z-index:20;background:#17202a;color:#fff;padding:9px 10px;box-shadow:0 2px 8px #0003}
@@ -333,21 +325,21 @@ function toggleHistory(){const p=document.getElementById('historyPanel');p.hidde
 function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
  const arr=FORMS[form], subset=arr.slice(subsetStart,subsetEnd===null?arr.length:subsetEnd).filter(p=>p[0]!=='YAĞLAR');
  // Compact six-column WhatsApp report matching the supplied reference.
- const W=2400, margin=34, top=112, bottom=30, cols=6, gap=10;
+ const W=2400, margin=34, top=120, bottom=34, cols=4, gap=14;
  const items=subset.map(p=>{const i=arr.indexOf(p);return {p,i,rs:rec.filter(r=>r.form===form&&r.index===i)}});
  const cellW=(W-margin*2-gap*(cols-1))/cols;
- const cardHeights=items.map(it=>Math.max(116, 95 + Math.min(4,it.rs.length)*27));
+ const cardHeights=items.map(it=>Math.max(142, 112 + Math.max(1,it.rs.length)*34));
  const rows=Math.ceil(items.length/cols); let rowHeights=[];
  for(let row=0;row<rows;row++) rowHeights.push(Math.max(...cardHeights.slice(row*cols,(row+1)*cols)));
  const H=top+bottom+rowHeights.reduce((a,b)=>a+b,0)+gap*(rows-1);
  const c=document.createElement('canvas'); c.width=W;c.height=H; const x=c.getContext('2d');
- x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#111827';x.font='bold 38px Arial';x.fillText('SAYIM RAPORU — '+new Date().toLocaleDateString('tr-TR'),margin,43);
- x.font='bold 27px Arial';x.fillText(form+(pageLabel?' — '+pageLabel:''),margin,82);
- x.fillStyle='#64748b';x.font='bold 16px Arial';x.fillText('Ürün tanımı • Kod • Palet × adet • Lokasyon • Genel toplam',margin,103);
+ x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#111827';x.font='bold 38px Arial';x.fillText('SAYIM RAPORU — '+new Date().toLocaleDateString('tr-TR'),margin,45);
+ x.font='bold 29px Arial';x.fillText(form+(pageLabel?' — '+pageLabel:''),margin,88);
+ x.fillStyle='#64748b';x.font='bold 16px Arial';x.fillText('Ürün ve kod • Palet × palet içi adet • Lokasyon • Satır adedi • Ürün toplamı',margin,111);
  let yOffsets=[];let runY=top;for(const h of rowHeights){yOffsets.push(runY);runY+=h+gap;}
  items.forEach((it,idx)=>{
   const col=idx%cols,row=Math.floor(idx/cols),xx=margin+col*(cellW+gap),yy=yOffsets[row],ch=rowHeights[row];
-  const rs=it.rs, headerH=39, labelH=22, totalH=31, bodyY=yy+headerH+labelH, bodyBottom=yy+ch-totalH, bodyH=Math.max(25,bodyBottom-bodyY), slots=Math.max(1,Math.min(4,rs.length)), slotH=bodyH/slots;
+  const rs=it.rs, headerH=42, labelH=26, totalH=36, bodyY=yy+headerH+labelH, bodyBottom=yy+ch-totalH, bodyH=Math.max(30,bodyBottom-bodyY), slots=Math.max(1,rs.length), slotH=bodyH/slots;
   x.fillStyle='#fff';x.fillRect(xx,yy,cellW,ch);x.strokeStyle='#9ca3af';x.lineWidth=1.5;x.strokeRect(xx,yy,cellW,ch);
   x.fillStyle='#26343d';x.fillRect(xx,yy,cellW,headerH);
   x.fillStyle='#fff';x.font='bold 19px Arial';let name=it.p[0];while(x.measureText(name).width>cellW*.62&&name.length>8)name=name.slice(0,-2)+'…';x.fillText(name,xx+10,yy+25);
@@ -355,18 +347,18 @@ function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
   x.fillStyle='#edf1f4';x.fillRect(xx,yy+headerH,cellW,labelH);
   const a=xx+cellW*.39,b=xx+cellW*.72;
   x.strokeStyle='#cbd5e1';x.lineWidth=1;x.beginPath();x.moveTo(a,yy+headerH);x.lineTo(a,bodyBottom);x.moveTo(b,yy+headerH);x.lineTo(b,bodyBottom);x.stroke();
-  x.fillStyle='#111827';x.font='bold 12px Arial';x.textAlign='center';x.fillText('PALET × ADET',xx+(a-xx)/2,yy+headerH+15);x.fillText('LOKASYON',(a+b)/2,yy+headerH+15);x.fillText('ADET',(b+xx+cellW)/2,yy+headerH+15);x.textAlign='left';
+  x.fillStyle='#111827';x.font='bold 15px Arial';x.textAlign='center';x.fillText('PALET × ADET',xx+(a-xx)/2,yy+headerH+18);x.fillText('LOKASYON',(a+b)/2,yy+headerH+18);x.fillText('ÜRÜN ADEDİ',(b+xx+cellW)/2,yy+headerH+18);x.textAlign='left';
   let totalP=0,totalU=0;
   if(!rs.length){x.fillStyle='#64748b';x.font='bold 16px Arial';x.textAlign='center';x.fillText('—',xx+cellW/2,bodyY+bodyH/2+5);x.textAlign='left';}
-  rs.slice(0,slots).forEach((r,ri)=>{const sy=bodyY+ri*slotH; if(ri>0){x.strokeStyle='#cbd5e1';x.beginPath();x.moveTo(xx,sy);x.lineTo(xx+cellW,sy);x.stroke();}
+  rs.forEach((r,ri)=>{const sy=bodyY+ri*slotH; if(ri>0){x.strokeStyle='#cbd5e1';x.beginPath();x.moveTo(xx,sy);x.lineTo(xx+cellW,sy);x.stroke();}
    const units=(Number(r.full)||0)*(Number(r.per)||0)+(Number(r.missing)||0);totalP+=Number(r.full)||0;totalU+=units;
-   x.fillStyle='#111827';x.font='bold 14px Arial';x.textAlign='center';x.fillText((r.full||0)+'×'+(r.per||0)+(r.missing?' + '+r.missing:''),xx+(a-xx)/2,sy+slotH/2+5);
-   x.font='bold 14px Arial';let loc=r.loc||'—';while(x.measureText(loc).width>(b-a)-6&&loc.length>5)loc=loc.slice(0,-2)+'…';x.fillText(loc,(a+b)/2,sy+slotH/2+5);
-   x.fillText(units.toLocaleString('tr-TR'),(b+xx+cellW)/2,sy+slotH/2+5);x.textAlign='left';
+   x.fillStyle='#111827';x.font='bold 17px Arial';x.textAlign='center';x.fillText((r.full||0)+'×'+(r.per||0)+(r.missing?' + '+r.missing:''),xx+(a-xx)/2,sy+slotH/2+6);
+   x.font='bold 17px Arial';let loc=r.loc||'—';while(x.measureText(loc).width>(b-a)-6&&loc.length>5)loc=loc.slice(0,-2)+'…';x.fillText(loc,(a+b)/2,sy+slotH/2+5);
+   x.font='bold 17px Arial';x.fillText(units.toLocaleString('tr-TR'),(b+xx+cellW)/2,sy+slotH/2+6);x.textAlign='left';
   });
   x.fillStyle='#dceafa';x.fillRect(xx,bodyBottom,cellW,totalH);
-  x.fillStyle='#172554';x.font='bold 14px Arial';x.fillText(rs.length?totalP+' palet':'Toplam: 0 palet',xx+8,yy+ch-10);
-  x.textAlign='right';x.font='bold 20px Arial';x.fillText(totalU.toLocaleString('tr-TR')+' adet',xx+cellW-8,yy+ch-9);x.textAlign='left';
+  x.fillStyle='#172554';x.font='bold 16px Arial';x.fillText(rs.length?totalP+' palet':'Toplam: 0 palet',xx+8,yy+ch-11);
+  x.textAlign='right';x.font='bold 23px Arial';x.fillText(totalU.toLocaleString('tr-TR')+' ADET TOPLAM',xx+cellW-8,yy+ch-10);x.textAlign='left';
  }); return c;
 }
 function generateDailyReport(){
@@ -433,13 +425,4 @@ function selfTest(){
   }catch(e){ const el=document.getElementById('selfTest'); if(el) el.textContent='❌ TEST HATASI: '+e.message; return false; }
 }
 
-</script><div id="selfTest" style="display:none"></div>
-<script>
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Service worker:", err));
-  });
-}
-</script>
-
-</body></html>
+</script><div id="selfTest" style="display:none"></div></body></html>
