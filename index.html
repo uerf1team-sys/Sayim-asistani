@@ -391,17 +391,92 @@ function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
   x.textAlign='right';x.font='bold 20px Arial';x.fillText(totalU.toLocaleString('tr-TR')+' adet',xx+cellW-8,yy+ch-9);x.textAlign='left';
  }); return c;
 }
-async function generateDailyReport(){
- if(currentUser){ await loadCloudCounts(); }
- const panel=document.getElementById('reportPanel');panel.hidden=false;const box=document.getElementById('reportLinks');box.innerHTML='';
- const jobs=[
-  {form:'SİMPAC STOK FORMU',start:0,end:null,label:'Simpac'},
-  {form:'TAMBUR STOK FORMU 1',start:0,end:25,label:'Tambur 1A'},
-  {form:'TAMBUR STOK FORMU 1',start:25,end:50,label:'Tambur 1B'},
-  {form:'TAMBUR STOK FORMU 2',start:0,end:null,label:'G Serisi Tamburlar'}
- ];
- jobs.forEach((job,i)=>{const c=canvasPage(job.form,i+1,job.start,job.end,job.label);const url=c.toDataURL('image/png');const a=document.createElement('a');a.href=url;a.download='Sayim_WhatsApp_'+(i+1)+'.png';a.textContent='📷 '+job.label+' — WhatsApp görselini indir';a.style.display='block';a.style.padding='12px 0';a.style.fontWeight='800';a.style.fontSize='16px';box.appendChild(a);});
+async function 
+async function generateDailyReport() {
+  const panel = document.getElementById('reportPanel');
+  const box = document.getElementById('reportLinks');
+
+  if (!currentUser) {
+    setmsg('Önce giriş yapmalısın.', true);
+    return;
+  }
+
+  const button = document.querySelector(
+    'button[onclick="generateDailyReport()"]'
+  );
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'GÜNCEL SAYIMLAR YÜKLENİYOR...';
+  }
+
+  try {
+    // Raporu oluşturmadan önce güncel kayıtları Supabase'den yükle.
+    await loadCloudCounts();
+
+    panel.hidden = false;
+    box.innerHTML = '';
+
+    const jobs = [
+      {
+        form: 'SİMPAC STOK FORMU',
+        start: 0,
+        end: null,
+        label: 'Simpac'
+      },
+      {
+        form: 'TAMBUR STOK FORMU 1',
+        start: 0,
+        end: 25,
+        label: 'Tambur 1A'
+      },
+      {
+        form: 'TAMBUR STOK FORMU 1',
+        start: 25,
+        end: 50,
+        label: 'Tambur 1B'
+      },
+      {
+        form: 'TAMBUR STOK FORMU 2',
+        start: 0,
+        end: null,
+        label: 'G Serisi Tamburlar'
+      }
+    ];
+
+    jobs.forEach((job, i) => {
+      const canvas = canvasPage(
+        job.form,
+        i + 1,
+        job.start,
+        job.end,
+        job.label
+      );
+
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `Sayim_WhatsApp_${i + 1}.png`;
+      link.textContent =
+        '📷 ' + job.label + ' — WhatsApp görselini indir';
+      link.style.display = 'block';
+      link.style.padding = '12px 0';
+      link.style.fontWeight = '800';
+      link.style.fontSize = '16px';
+
+      box.appendChild(link);
+    });
+
+    setmsg('Güncel sayımlar yüklendi; rapor yeniden oluşturuldu.');
+  } catch (error) {
+    setmsg('Rapor oluşturulamadı: ' + error.message, true);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'WHATSAPP RAPORUNU OLUŞTUR';
+    }
+  }
 }
+
 function render(){
  const root=document.getElementById('forms'); root.innerHTML='';
  for(const [form,arr] of Object.entries(FORMS)){
