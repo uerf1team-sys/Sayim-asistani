@@ -93,6 +93,7 @@ const LOCS=["Simpac", "Ales", "T.1", "T.2", "T.3", "T.4", "Otomasyon", "Kamara a
 const KEY='sayim_single_page_v19';
 const HISTORY_KEY='sayim_single_page_v19_history';
 const TODAY=new Date().toLocaleDateString('tr-TR');
+function localISODate(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 var selected=null;
 var editIndex=null;
 var changeHistory=readStore('sayim_single_page_v21_history',[]);
@@ -110,36 +111,30 @@ var saved={date:TODAY,rec:[]};
 var rec=[];
 function normCode(v){return String(v??'').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9]/g,'');}
 function normName(v){return String(v??'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');}
-function resolveFormName(value){
-  if(value && Object.prototype.hasOwnProperty.call(FORMS,value)) return value;
-  const target=normName(value);
-  const keys=Object.keys(FORMS).filter(k=>normName(k)===target);
-  return keys.length===1?keys[0]:null;
-}
-function localDateISO(d=new Date()){
-  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
 function productIndexForDb(p){
-  const form=resolveFormName(p?.form_name);
-  const arr=FORMS[form]||[]; if(!arr.length)return Math.max(0,(Number(p?.sort_order)||1)-1);
+  const arr=FORMS[p?.form_name]||[];
+  if(!arr.length)return -1;
   const dbCode=normCode(p?.product_code), dbName=normName(p?.product_name);
+  // A form row is an independent product identity. Prefer its stable sort_order
+  // when the row's identity agrees, so duplicate names/codes cannot steal counts.
+  const order=Number(p?.sort_order)-1;
+  if(Number.isInteger(order)&&order>=0&&order<arr.length){
+    const item=arr[order];
+    if(normName(item[0])===dbName && normCode(item[1])===dbCode)return order;
+  }
   let hits=arr.map((item,i)=>({item,i})).filter(x=>normName(x.item[0])===dbName && normCode(x.item[1])===dbCode);
   if(hits.length===1)return hits[0].i;
-  hits=arr.map((item,i)=>({item,i})).filter(x=>normName(x.item[0])===dbName);
-  if(hits.length===1)return hits[0].i;
-  hits=arr.map((item,i)=>({item,i})).filter(x=>dbCode && normCode(x.item[1])===dbCode);
-  if(hits.length===1)return hits[0].i;
-  return Math.max(0,(Number(p?.sort_order)||1)-1);
+  // Do not guess by name-only or code-only when multiple rows are possible.
+  return -1;
 }
 async function loadCloudCounts(){
   if(!currentUser) return;
-  const {data,error}=await supabaseClient.from('counts').select('id,count_date,product_id,location_id,full_pallets,missing_units,pallet_capacity,created_at').eq('count_date',localDateISO()).order('id');
+  const {data,error}=await supabaseClient.from('counts').select('id,count_date,product_id,location_id,full_pallets,missing_units,pallet_capacity,created_at').eq('count_date',localISODate()).order('id');
   if(error){ setmsg('Supabase kayıtları okunamadı: '+error.message,true); return; }
   const [{data:products,error:pe},{data:locations,error:le}]=await Promise.all([supabaseClient.from('products').select('id,form_name,sort_order,product_name,product_code,pallet_capacity'),supabaseClient.from('locations').select('id,name,sort_order')]);
   if(pe||le){setmsg('Ürün/lokasyon bilgileri okunamadı.',true);return;}
   const pm=new Map(products.map(x=>[x.id,x])); const lm=new Map(locations.map(x=>[x.id,x]));
-  rec=data.map(r=>{const p=pm.get(r.product_id),l=lm.get(r.location_id),idx=productIndexForDb(p); const cap=Number(r.pallet_capacity ?? p?.pallet_capacity ?? 0); const full=Number(r.full_pallets)||0, missing=Number(r.missing_units)||0; return {id:r.id,form:resolveFormName(p?.form_name),index:idx,product:p?.product_name||'',code:p?.product_code||'',loc:l?.name||'',full,per:cap,missing,total:full*cap+missing,done:false,time:r.created_at};}).filter(r=>r.form);
+  rec=data.map(r=>{const p=pm.get(r.product_id),l=lm.get(r.location_id);if(!p||!l)return null;const idx=productIndexForDb(p);if(idx<0){console.warn('Ürün satırı güvenli eşleştirilemedi:',p);return null;}const cap=Number(r.pallet_capacity ?? p?.pallet_capacity ?? 0); const full=Number(r.full_pallets)||0, missing=Number(r.missing_units)||0; return {id:r.id,form:p.form_name,index:idx,product:FORMS[p.form_name][idx][0],code:FORMS[p.form_name][idx][1]||p.product_code||'',loc:l.name,full,per:cap,missing,total:full*cap+missing,done:false,time:r.created_at};}).filter(Boolean);
   render(); renderTransfer(); renderStockControl();
 }
 async function persist(){
@@ -149,14 +144,20 @@ async function persist(){
 async function cloudSaveRow(row, oldId=null){
   const {data:formProducts,error:pe}=await supabaseClient.from('products').select('id,form_name,sort_order,product_name,product_code,pallet_capacity').eq('form_name',row.form);
   if(pe){setmsg('Ürün listesi okunamadı: '+pe.message,true);return null;}
-  const sameName=(formProducts||[]).filter(p=>normName(p.product_name)===normName(row.product));
-  const exact=sameName.filter(p=>normCode(p.product_code)===normCode(row.code));
-  let products=exact.length===1?exact[0]:(sameName.length===1?sameName[0]:null);
-  if(!products) products=(formProducts||[]).find(p=>Number(p.sort_order)===row.index+1);
-  if(!products){setmsg('Ürün eşleşmesi belirsiz: '+row.product+' / '+row.code+' ('+row.form+'). Kayıt güvenlik için yapılmadı.',true);return null;}
+  // The selected form row (sort_order) is the primary identity; names/codes
+  // can legitimately repeat on separate rows and must not merge those rows.
+  let products=(formProducts||[]).find(p=>Number(p.sort_order)===row.index+1);
+  if(products && (normName(products.product_name)!==normName(row.product) || normCode(products.product_code)!==normCode(row.code))){
+    products=null;
+  }
+  if(!products){
+    const exact=(formProducts||[]).filter(p=>normName(p.product_name)===normName(row.product)&&normCode(p.product_code)===normCode(row.code));
+    if(exact.length===1)products=exact[0];
+  }
+  if(!products){setmsg('Ürün eşleşmesi belirsiz: '+row.product+' / '+row.code+' ('+row.form+'). Veritabanındaki ürün satırı ile form uyuşmuyor; kayıt güvenlik için yapılmadı.',true);return null;}
   const {data:locs,error:le}=await supabaseClient.from('locations').select('id,name').eq('name',row.loc).limit(1).single();
   if(le){setmsg('Lokasyon bulunamadı: '+le.message,true);return null;}
-  const payload={count_date:localDateISO(),product_id:products.id,location_id:locs.id,full_pallets:row.full,missing_units:row.missing,pallet_capacity:row.per,updated_at:new Date().toISOString()};
+  const payload={count_date:localISODate(),product_id:products.id,location_id:locs.id,full_pallets:row.full,missing_units:row.missing,pallet_capacity:row.per,updated_at:new Date().toISOString()};
   let res;
   if(oldId) res=await supabaseClient.from('counts').update(payload).eq('id',oldId).select().single();
   else res=await supabaseClient.from('counts').insert(payload).select().single();
@@ -391,92 +392,41 @@ function canvasPage(form,pageNo,subsetStart=0,subsetEnd=null,pageLabel=''){
   x.textAlign='right';x.font='bold 20px Arial';x.fillText(totalU.toLocaleString('tr-TR')+' adet',xx+cellW-8,yy+ch-9);x.textAlign='left';
  }); return c;
 }
-async function 
-async function generateDailyReport() {
-  const panel = document.getElementById('reportPanel');
-  const box = document.getElementById('reportLinks');
-
-  if (!currentUser) {
-    setmsg('Önce giriş yapmalısın.', true);
-    return;
-  }
-
-  const button = document.querySelector(
-    'button[onclick="generateDailyReport()"]'
-  );
-
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'GÜNCEL SAYIMLAR YÜKLENİYOR...';
-  }
-
-  try {
-    // Raporu oluşturmadan önce güncel kayıtları Supabase'den yükle.
-    await loadCloudCounts();
-
-    panel.hidden = false;
-    box.innerHTML = '';
-
-    const jobs = [
-      {
-        form: 'SİMPAC STOK FORMU',
-        start: 0,
-        end: null,
-        label: 'Simpac'
-      },
-      {
-        form: 'TAMBUR STOK FORMU 1',
-        start: 0,
-        end: 25,
-        label: 'Tambur 1A'
-      },
-      {
-        form: 'TAMBUR STOK FORMU 1',
-        start: 25,
-        end: 50,
-        label: 'Tambur 1B'
-      },
-      {
-        form: 'TAMBUR STOK FORMU 2',
-        start: 0,
-        end: null,
-        label: 'G Serisi Tamburlar'
-      }
-    ];
-
-    jobs.forEach((job, i) => {
-      const canvas = canvasPage(
-        job.form,
-        i + 1,
-        job.start,
-        job.end,
-        job.label
-      );
-
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = `Sayim_WhatsApp_${i + 1}.png`;
-      link.textContent =
-        '📷 ' + job.label + ' — WhatsApp görselini indir';
-      link.style.display = 'block';
-      link.style.padding = '12px 0';
-      link.style.fontWeight = '800';
-      link.style.fontSize = '16px';
-
-      box.appendChild(link);
-    });
-
-    setmsg('Güncel sayımlar yüklendi; rapor yeniden oluşturuldu.');
-  } catch (error) {
-    setmsg('Rapor oluşturulamadı: ' + error.message, true);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = 'WHATSAPP RAPORUNU OLUŞTUR';
-    }
-  }
+async function generateDailyReport(){
+ const panel=document.getElementById('reportPanel');
+ const box=document.getElementById('reportLinks');
+ const button=document.querySelector('button[onclick="generateDailyReport()"]');
+ if(!currentUser){setmsg('Önce giriş yapmalısın.',true);return;}
+ if(button){button.disabled=true;button.textContent='GÜNCEL SAYIMLAR YÜKLENİYOR...';}
+ try{
+  // loadCloudCounts now reports read failures without clearing the current list.
+  const beforeCount=rec.length;
+  await loadCloudCounts();
+  panel.hidden=false;
+  box.innerHTML='';
+  const jobs=[
+   {form:'SİMPAC STOK FORMU',start:0,end:null,label:'Simpac'},
+   {form:'TAMBUR STOK FORMU 1',start:0,end:25,label:'Tambur 1A'},
+   {form:'TAMBUR STOK FORMU 1',start:25,end:50,label:'Tambur 1B'},
+   {form:'TAMBUR STOK FORMU 2',start:0,end:null,label:'G Serisi Tamburlar'}
+  ];
+  jobs.forEach((job,i)=>{
+   const canvas=canvasPage(job.form,i+1,job.start,job.end,job.label);
+   const link=document.createElement('a');
+   link.href=canvas.toDataURL('image/png');
+   link.download='Sayim_WhatsApp_'+(i+1)+'.png';
+   link.textContent='WhatsApp görselini indir — '+job.label;
+   link.style.display='block';link.style.padding='12px 0';
+   link.style.fontWeight='800';link.style.fontSize='16px';
+   box.appendChild(link);
+  });
+  setmsg('Rapor oluşturuldu. Aynı ürünün lokasyon kayıtları ayrı satırlarda korunur.',false);
+ }catch(error){
+  setmsg('Rapor oluşturulamadı: '+(error?.message||error),true);
+ }finally{
+  if(button){button.disabled=false;button.textContent='WHATSAPP RAPORUNU OLUŞTUR';}
+ }
 }
-
 function render(){
  const root=document.getElementById('forms'); root.innerHTML='';
  for(const [form,arr] of Object.entries(FORMS)){
@@ -496,11 +446,25 @@ function render(){
 }
 async function initCloudApp(){
  document.getElementById('loginBtn').onclick=async()=>{
-   const email=document.getElementById('loginEmail').value.trim(),password=document.getElementById('loginPassword').value;
-   const m=document.getElementById('loginMsg'); m.textContent='Giriş yapılıyor...';
-   const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});
-   if(error){m.textContent='Giriş başarısız: '+error.message;return;}
-   currentUser=data.user; document.getElementById('loginBox').style.display='none';document.getElementById('logoutBtn').hidden=false;await loadCloudCounts();
+   const btn=document.getElementById('loginBtn');
+   const email=document.getElementById('loginEmail').value.trim();
+   const password=document.getElementById('loginPassword').value;
+   const m=document.getElementById('loginMsg');
+   if(!email||!password){m.textContent='E-posta ve şifreyi gir.';return;}
+   btn.disabled=true;btn.textContent='GİRİŞ YAPILIYOR...';
+   m.textContent='Supabase bağlantısı kontrol ediliyor...';
+   try{
+     const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});
+     if(error){m.textContent='Giriş başarısız: '+error.message;return;}
+     currentUser=data.user;
+     document.getElementById('loginBox').style.display='none';
+     document.getElementById('logoutBtn').hidden=false;
+     await loadCloudCounts();
+   }catch(error){
+     m.textContent='Bağlantı hatası: '+(error?.message||String(error));
+   }finally{
+     btn.disabled=false;btn.textContent='GİRİŞ YAP';
+   }
  };
  document.getElementById('logoutBtn').onclick=async()=>{await supabaseClient.auth.signOut();location.reload()};
  const {data}=await supabaseClient.auth.getSession();
@@ -508,6 +472,16 @@ async function initCloudApp(){
  else {document.getElementById('loginBox').style.display='flex';}
  bindUI();
 }
+window.addEventListener('error',e=>{
+ const m=document.getElementById('loginMsg');
+ if(m && document.getElementById('loginBox')?.style.display!=='none')
+   m.textContent='Uygulama kodu hatası: '+(e.message||'Bilinmeyen hata');
+});
+window.addEventListener('unhandledrejection',e=>{
+ const m=document.getElementById('loginMsg');
+ if(m && document.getElementById('loginBox')?.style.display!=='none')
+   m.textContent='Beklenmeyen hata: '+(e.reason?.message||String(e.reason||'Bilinmeyen hata'));
+});
 initCloudApp();
 
 function storageStatus(){
