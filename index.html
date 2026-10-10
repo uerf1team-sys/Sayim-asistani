@@ -93,6 +93,7 @@ const LOCS=["Simpac", "Ales", "T.1", "T.2", "T.3", "T.4", "Otomasyon", "Kamara a
 const KEY='sayim_single_page_v19';
 const HISTORY_KEY='sayim_single_page_v19_history';
 const TODAY=new Date().toLocaleDateString('tr-TR');
+function localISODate(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 var selected=null;
 var editIndex=null;
 var changeHistory=readStore('sayim_single_page_v21_history',[]);
@@ -111,24 +112,29 @@ var rec=[];
 function normCode(v){return String(v??'').toLocaleLowerCase('tr-TR').replace(/[^a-z0-9]/g,'');}
 function normName(v){return String(v??'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i').replace(/[^a-z0-9]/g,'');}
 function productIndexForDb(p){
-  const arr=FORMS[p?.form_name]||[]; if(!arr.length)return Math.max(0,(Number(p?.sort_order)||1)-1);
+  const arr=FORMS[p?.form_name]||[];
+  if(!arr.length)return -1;
   const dbCode=normCode(p?.product_code), dbName=normName(p?.product_name);
+  // A form row is an independent product identity. Prefer its stable sort_order
+  // when the row's identity agrees, so duplicate names/codes cannot steal counts.
+  const order=Number(p?.sort_order)-1;
+  if(Number.isInteger(order)&&order>=0&&order<arr.length){
+    const item=arr[order];
+    if(normName(item[0])===dbName && normCode(item[1])===dbCode)return order;
+  }
   let hits=arr.map((item,i)=>({item,i})).filter(x=>normName(x.item[0])===dbName && normCode(x.item[1])===dbCode);
   if(hits.length===1)return hits[0].i;
-  hits=arr.map((item,i)=>({item,i})).filter(x=>normName(x.item[0])===dbName);
-  if(hits.length===1)return hits[0].i;
-  hits=arr.map((item,i)=>({item,i})).filter(x=>dbCode && normCode(x.item[1])===dbCode);
-  if(hits.length===1)return hits[0].i;
-  return Math.max(0,(Number(p?.sort_order)||1)-1);
+  // Do not guess by name-only or code-only when multiple rows are possible.
+  return -1;
 }
 async function loadCloudCounts(){
   if(!currentUser) return;
-  const {data,error}=await supabaseClient.from('counts').select('id,count_date,product_id,location_id,full_pallets,missing_units,pallet_capacity,created_at').eq('count_date',new Date().toISOString().slice(0,10)).order('id');
+  const {data,error}=await supabaseClient.from('counts').select('id,count_date,product_id,location_id,full_pallets,missing_units,pallet_capacity,created_at').eq('count_date',localISODate()).order('id');
   if(error){ setmsg('Supabase kayıtları okunamadı: '+error.message,true); return; }
   const [{data:products,error:pe},{data:locations,error:le}]=await Promise.all([supabaseClient.from('products').select('id,form_name,sort_order,product_name,product_code,pallet_capacity'),supabaseClient.from('locations').select('id,name,sort_order')]);
   if(pe||le){setmsg('Ürün/lokasyon bilgileri okunamadı.',true);return;}
   const pm=new Map(products.map(x=>[x.id,x])); const lm=new Map(locations.map(x=>[x.id,x]));
-  rec=data.map(r=>{const p=pm.get(r.product_id),l=lm.get(r.location_id),idx=productIndexForDb(p); const cap=Number(r.pallet_capacity ?? p?.pallet_capacity ?? 0); const full=Number(r.full_pallets)||0, missing=Number(r.missing_units)||0; return {id:r.id,form:p?.form_name,index:idx,product:p?.product_name||'',code:p?.product_code||'',loc:l?.name||'',full,per:cap,missing,total:full*cap+missing,done:false,time:r.created_at};}).filter(r=>r.form);
+  rec=data.map(r=>{const p=pm.get(r.product_id),l=lm.get(r.location_id);if(!p||!l)return null;const idx=productIndexForDb(p);if(idx<0){console.warn('Ürün satırı güvenli eşleştirilemedi:',p);return null;}const cap=Number(r.pallet_capacity ?? p?.pallet_capacity ?? 0); const full=Number(r.full_pallets)||0, missing=Number(r.missing_units)||0; return {id:r.id,form:p.form_name,index:idx,product:FORMS[p.form_name][idx][0],code:FORMS[p.form_name][idx][1]||p.product_code||'',loc:l.name,full,per:cap,missing,total:full*cap+missing,done:false,time:r.created_at};}).filter(Boolean);
   render(); renderTransfer(); renderStockControl();
 }
 async function persist(){
@@ -138,14 +144,20 @@ async function persist(){
 async function cloudSaveRow(row, oldId=null){
   const {data:formProducts,error:pe}=await supabaseClient.from('products').select('id,form_name,sort_order,product_name,product_code,pallet_capacity').eq('form_name',row.form);
   if(pe){setmsg('Ürün listesi okunamadı: '+pe.message,true);return null;}
-  const sameName=(formProducts||[]).filter(p=>normName(p.product_name)===normName(row.product));
-  const exact=sameName.filter(p=>normCode(p.product_code)===normCode(row.code));
-  let products=exact.length===1?exact[0]:(sameName.length===1?sameName[0]:null);
-  if(!products) products=(formProducts||[]).find(p=>Number(p.sort_order)===row.index+1);
-  if(!products){setmsg('Ürün eşleşmesi belirsiz: '+row.product+' / '+row.code+' ('+row.form+'). Kayıt güvenlik için yapılmadı.',true);return null;}
+  // The selected form row (sort_order) is the primary identity; names/codes
+  // can legitimately repeat on separate rows and must not merge those rows.
+  let products=(formProducts||[]).find(p=>Number(p.sort_order)===row.index+1);
+  if(products && (normName(products.product_name)!==normName(row.product) || normCode(products.product_code)!==normCode(row.code))){
+    products=null;
+  }
+  if(!products){
+    const exact=(formProducts||[]).filter(p=>normName(p.product_name)===normName(row.product)&&normCode(p.product_code)===normCode(row.code));
+    if(exact.length===1)products=exact[0];
+  }
+  if(!products){setmsg('Ürün eşleşmesi belirsiz: '+row.product+' / '+row.code+' ('+row.form+'). Veritabanındaki ürün satırı ile form uyuşmuyor; kayıt güvenlik için yapılmadı.',true);return null;}
   const {data:locs,error:le}=await supabaseClient.from('locations').select('id,name').eq('name',row.loc).limit(1).single();
   if(le){setmsg('Lokasyon bulunamadı: '+le.message,true);return null;}
-  const payload={count_date:new Date().toISOString().slice(0,10),product_id:products.id,location_id:locs.id,full_pallets:row.full,missing_units:row.missing,pallet_capacity:row.per,updated_at:new Date().toISOString()};
+  const payload={count_date:localISODate(),product_id:products.id,location_id:locs.id,full_pallets:row.full,missing_units:row.missing,pallet_capacity:row.per,updated_at:new Date().toISOString()};
   let res;
   if(oldId) res=await supabaseClient.from('counts').update(payload).eq('id',oldId).select().single();
   else res=await supabaseClient.from('counts').insert(payload).select().single();
