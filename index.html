@@ -115,16 +115,13 @@ function productIndexForDb(p){
   const arr=FORMS[p?.form_name]||[];
   if(!arr.length)return -1;
   const dbCode=normCode(p?.product_code), dbName=normName(p?.product_name);
-  // A form row is an independent product identity. Prefer its stable sort_order
-  // when the row's identity agrees, so duplicate names/codes cannot steal counts.
+  // Her form satırı bağımsız ürün kimliğidir. Supabase'de ürün adı/kodu
+  // eski veya farklı yazılmış olsa bile, aynı formdaki sort_order satırı belirler.
+  // Böylece 702 PHYTON ve kodu boş MDS gibi satırlar eşleşme hatasına düşmez.
   const order=Number(p?.sort_order)-1;
-  if(Number.isInteger(order)&&order>=0&&order<arr.length){
-    const item=arr[order];
-    if(normName(item[0])===dbName && normCode(item[1])===dbCode)return order;
-  }
-  let hits=arr.map((item,i)=>({item,i})).filter(x=>normName(x.item[0])===dbName && normCode(x.item[1])===dbCode);
+  if(Number.isInteger(order)&&order>=0&&order<arr.length)return order;
+  const hits=arr.map((item,i)=>({item,i})).filter(x=>normName(x.item[0])===dbName && normCode(x.item[1])===dbCode);
   if(hits.length===1)return hits[0].i;
-  // Do not guess by name-only or code-only when multiple rows are possible.
   return -1;
 }
 async function loadCloudCounts(){
@@ -144,17 +141,15 @@ async function persist(){
 async function cloudSaveRow(row, oldId=null){
   const {data:formProducts,error:pe}=await supabaseClient.from('products').select('id,form_name,sort_order,product_name,product_code,pallet_capacity').eq('form_name',row.form);
   if(pe){setmsg('Ürün listesi okunamadı: '+pe.message,true);return null;}
-  // The selected form row (sort_order) is the primary identity; names/codes
-  // can legitimately repeat on separate rows and must not merge those rows.
+  // Öncelik form içindeki sabit satır numarasındadır. Ürün adı/kodu
+  // eski sürümde farklı kaydedilmiş olsa da doğru satırın ID'si kullanılır.
+  // Bu, aynı adlı/kodlu bağımsız satırların birbirine karışmasını önler.
   let products=(formProducts||[]).find(p=>Number(p.sort_order)===row.index+1);
-  if(products && (normName(products.product_name)!==normName(row.product) || normCode(products.product_code)!==normCode(row.code))){
-    products=null;
-  }
   if(!products){
     const exact=(formProducts||[]).filter(p=>normName(p.product_name)===normName(row.product)&&normCode(p.product_code)===normCode(row.code));
     if(exact.length===1)products=exact[0];
   }
-  if(!products){setmsg('Ürün eşleşmesi belirsiz: '+row.product+' / '+row.code+' ('+row.form+'). Veritabanındaki ürün satırı ile form uyuşmuyor; kayıt güvenlik için yapılmadı.',true);return null;}
+  if(!products){setmsg('Ürün veritabanında bulunamadı: '+row.product+' / '+row.code+' ('+row.form+'). Bu form satırı için Supabase products tablosunda sort_order kaydı yok.',true);return null;}
   const {data:locs,error:le}=await supabaseClient.from('locations').select('id,name').eq('name',row.loc).limit(1).single();
   if(le){setmsg('Lokasyon bulunamadı: '+le.message,true);return null;}
   const payload={count_date:localISODate(),product_id:products.id,location_id:locs.id,full_pallets:row.full,missing_units:row.missing,pallet_capacity:row.per,updated_at:new Date().toISOString()};
